@@ -15,3 +15,5 @@ What data will we need?
 - Estimated Completion Date (date)
 - Funds Obligated (float)
 - Source URL (string)
+
+Automatic data annotation requires an OpenAPI key in your .env (OPENAI_API_KEY=12345)
