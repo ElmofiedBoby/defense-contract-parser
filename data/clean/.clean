@@ -1,0 +1,8 @@
+data/clean
+YYYY-MM-DD_1234567.json
+{
+    military_branch: str
+    source_url: str
+    contract_text: str
+    contract_date: datetime
+}

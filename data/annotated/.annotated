@@ -1,0 +1,15 @@
+data/annotated
+YYYY-MM-DD_1234567.json
+{
+    contract_id: str
+    federal_agency: str
+    military_branch: str
+    contract_amount: float
+    contract_date: date
+    company_name: str
+    location: str
+    contract_description: str
+    estimated_completion_date: date
+    funds_obligated: float
+    source_url: str
+}
