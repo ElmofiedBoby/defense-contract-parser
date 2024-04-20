@@ -2,7 +2,7 @@ import csv
 import json
 import requests
 from pathlib import Path
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup, NavigableString, Tag
 from datetime import datetime
 from typing import Dict, List
 from model import Contract, Precontract
@@ -49,7 +49,10 @@ class Scraper:
         response = requests.get(url)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
-        date_text = soup.find("h1", class_="maintitle").getText(strip=True)[14:].split(" ")
+        date_text_find = soup.find("h1", class_="maintitle")
+        if date_text_find is None:
+            return None
+        date_text = date_text_find.getText(strip=True)[14:].split(" ")
 
         if date_text[0] == "Jan.":
             date_text[0] = "January"
@@ -73,19 +76,20 @@ class Scraper:
         for contract in contract_data:
             if type(contract) == NavigableString:
                 continue
-            if bool(contract.attrs):
-                curr_branch = contract.text
-                continue
-            if len(contract.text) < 100:
-                continue
-            contracts.append(
-                Precontract(
-                    military_branch=curr_branch,
-                    source_url=url,
-                    contract_text = contract.text,
-                    contract_date = date
+            if type(contract) == Tag:
+                if bool(contract.attrs) and not contract.getText().isspace() and contract.getText(strip=True) != "CONTRACTS":
+                    curr_branch = contract.text
+                    continue
+                if len(contract.text) < 100:
+                    continue
+                contracts.append(
+                    Precontract(
+                        military_branch=curr_branch,
+                        source_url=url,
+                        contract_text = contract.text,
+                        contract_date = date
+                    )
                 )
-            )
         return contracts
     
     def precontract_to_json(self, contract: Precontract):
@@ -102,8 +106,26 @@ class Scraper:
                     return o.isoformat()
                 return super().default(o)
         filepath = self.base_data_filename.joinpath(f"{contract.contract_date.strftime('%Y-%m-%d')}_{contract.source_url[56:-1]}.json")
-        with open(filepath, 'w') as json_file:
-            json.dump(contract_dict, json_file, cls=DateTimeEncoder)
+        # Check if the file already exists
+        if filepath.exists():
+            # Read the existing data
+            with open(filepath, 'r') as file:
+                try:
+                    data = json.load(file)
+                    # Ensure data is in list format
+                    if not isinstance(data, list):
+                        data = [data]
+                except json.JSONDecodeError:
+                    data = []
+        else:
+            data = []
+        
+        # Append the new contract data
+        data.append(contract_dict)
+        
+        # Write the updated data back to the file
+        with open(filepath, 'w') as file:
+            json.dump(data, file, cls=DateTimeEncoder, indent=4)
 
     def download_all_contracts(self, start_page: int):
         """
@@ -116,9 +138,10 @@ class Scraper:
             urls = self.get_date_url(i)
             for w in urls:
                 contracts = self.get_date_contract(w)
+                if contracts is None:
+                    continue
                 for x in contracts:
                     self.precontract_to_json(x)
 
 scraper = Scraper()
-# scraper.get_date_contract("https://www.defense.gov/News/Contracts/Contract/Article/3691213/")
-scraper.download_all_contracts(120)
+scraper.download_all_contracts(start=0)
