@@ -13,8 +13,9 @@ class Contract:
     location: str
     contract_description: str
     estimated_completion_date: date
-    funds_obligated: float
+    funds_obligated: str
     source_url: str
+    contract_text: str
 
 @dataclass
 class Precontract:
