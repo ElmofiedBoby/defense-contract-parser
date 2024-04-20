@@ -1,11 +1,11 @@
-import csv
 import json
 import requests
+import os
 from pathlib import Path
 from bs4 import BeautifulSoup, NavigableString, Tag
 from datetime import datetime
-from typing import Dict, List
-from model import Contract, Precontract
+from typing import List
+from model import Precontract
 from config import Config
 from dataclasses import asdict
 
@@ -92,7 +92,22 @@ class Scraper:
                 )
         return contracts
     
-    def precontract_to_json(self, contract: Precontract):
+    def read_precontract(self, filename: str) -> List[Precontract]:
+        with open(filename, 'r') as file:
+            data = json.load(file)
+            
+        precontracts = [
+            Precontract(
+                military_branch=item['military_branch'],
+                source_url=item['source_url'],
+                contract_text=item['contract_text'],
+                contract_date=datetime.fromisoformat(item['contract_date'])
+            )
+            for item in data
+        ]
+        return precontracts
+
+    def write_precontract(self, contract: Precontract):
         """
         Input: An unprocessed contract (Precontract)
         Output: None
@@ -105,7 +120,7 @@ class Scraper:
                 if isinstance(o, datetime):
                     return o.isoformat()
                 return super().default(o)
-        filepath = self.base_data_filename.joinpath(f"{contract.contract_date.strftime('%Y-%m-%d')}_{contract.source_url[56:-1]}.json")
+        filepath = self.base_data_filename.joinpath("raw").joinpath(f"{contract.contract_date.strftime('%Y-%m-%d')}_{contract.source_url[56:-1]}.json")
         # Check if the file already exists
         if filepath.exists():
             # Read the existing data
@@ -141,7 +156,40 @@ class Scraper:
                 if contracts is None:
                     continue
                 for x in contracts:
-                    self.precontract_to_json(x)
+                    self.write_precontract(x)
 
-scraper = Scraper()
-scraper.download_all_contracts(start=0)
+    def clean_data(self):
+        """
+        Cleans all data of escape sequences.
+        """
+        files = os.listdir("data/raw")
+        for file in files:
+            if file.startswith("."):
+                continue
+            self.clean_file(f"data/raw/{file}", f"data/clean/{file}")
+    
+    def clean_file(self, file_path, new_file_path=None):
+        """
+        Reads a file, cleans its content, and writes the cleaned data back.
+        Optionally, writes to a new file if a new file path is provided.
+
+        Args:
+        file_path (str): The path to the file to be cleaned.
+        new_file_path (str, optional): The path to save the cleaned data to. If not specified, 
+        it will overwrite the original file.
+        """
+        def clean_text(text):
+            # Replace newlines and tabs with a single space
+            text = json.loads(text)
+            for i in range(len(text)):
+                text[i]["military_branch"] = text[i]["military_branch"].replace('\n', '').replace('\t', '').replace('\r', '')
+                text[i]["source_url"] = text[i]["source_url"].replace('\n', '').replace('\t', '').replace('\r', '')
+                text[i]["contract_text"] = text[i]["contract_text"].replace('\n', '').replace('\t', '').replace('\r', '')
+            return json.dumps(text)
+        
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        cleaned_content = clean_text(content)
+        output_file_path = new_file_path if new_file_path else file_path
+        with open(output_file_path, 'w', encoding='utf-8') as file:
+            file.write(cleaned_content)
