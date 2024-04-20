@@ -16,6 +16,26 @@ class Annotator:
     client = OpenAI()
     base_data_filename = Path(Config.data_dir)
 
+    def annotate_contract_safe(self, contract: Precontract) -> str:
+        annotated = self.client.chat.completions.create(
+            model="gpt-3.5-turbo-0125",
+            response_format={ "type": "json_object" },
+            max_tokens=250,  # Adjust based on how long you expect the response to be
+            temperature=0.5,  # Adjust for creativity. Lower is more deterministic.
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"{self.prompt}",
+                },
+                {
+                    "role": "user",
+                    "content": f"\"{contract.contract_text}\""
+                }
+            ]
+        )
+        filename = f"{contract.contract_date.strftime('%Y-%m-%d')}_{contract.source_url[56:-1]}.json"
+        return (filename, annotated.choices[0].message.content)
+
     def annotate_contract(self, contract: Precontract) -> Contract:
         annotated = self.client.chat.completions.create(
             model="gpt-3.5-turbo-0125",
@@ -50,7 +70,18 @@ class Annotator:
         )
         return new_contract
     
-    def write_contracts(self, contracts: Contract):
+    def write_contracts_safe(self, strings):
+        if not strings:
+            return
+        filepath = self.base_data_filename.joinpath("blackbox").joinpath(strings[0][0])
+        with open(filepath, 'w') as file:
+            for _, second_element in strings:
+                second_element = " ".join(line.strip() for line in second_element.splitlines())
+                file.write(second_element + '\n')
+
+
+
+    def write_contracts(self, contracts: List[Contract]):
         """
         Input: An processed contract (Contract)
         Output: None
@@ -89,5 +120,20 @@ class Annotator:
                 annotations.append(annotator.annotate_contract(contract))
             annotator.write_contracts(annotations)
 
+    def annotate_all_safe(self):
+        annotator=Annotator()
+        scraper=Scraper()
+        files = os.listdir("data/clean")
+        for file in files:
+            if file.startswith("."):
+                continue
+            print(f"File: {file}")
+            contracts = scraper.read_precontract(filename=f"data/clean/{file}")
+            annotations = []
+            for contract in contracts:
+                print(f"Contract: {contract.source_url}")
+                annotations.append(annotator.annotate_contract_safe(contract))
+            annotator.write_contracts_safe(annotations)
+
 annotator = Annotator()
-annotator.annotate_all()
+annotator.annotate_all_safe()
