@@ -21,7 +21,7 @@ class Annotator:
         annotated = self.client.chat.completions.create(
             model="gpt-3.5-turbo-0125",
             response_format={ "type": "json_object" },
-            max_tokens=250,  # Adjust based on how long you expect the response to be
+            max_tokens=1024,  # Adjust based on how long you expect the response to be
             temperature=0.5,  # Adjust for creativity. Lower is more deterministic.
             messages=[
                 {
@@ -34,8 +34,8 @@ class Annotator:
                 }
             ]
         )
-        filename = f"{contract.contract_date.strftime('%Y-%m-%d')}_{contract.source_url[56:-1]}.json"
-        return (filename, annotated.choices[0].message.content)
+        # filename = f"{contract.contract_date.strftime('%Y-%m-%d')}_{contract.source_url[56:-1]}.json"
+        return annotated.choices[0].message.content
 
     def annotate_contract(self, contract: Precontract) -> Contract:
         annotated = self.client.chat.completions.create(
@@ -333,9 +333,15 @@ class Annotator:
             contracts = scraper.read_precontract(filename=f"data/clean/{file}")
             annotations = []
             for contract in contracts:
-                annotations.append(annotator.annotate_contract_safe(contract))
-            annotator.write_contracts_safe(annotations)
+                try:
+                    json_content = json.loads(annotator.annotate_contract_safe(contract))
+                    annotations.append(json_content)
+                except json.decoder.JSONDecodeError as e:
+                    print(f"JSONDecodeError! Skipping contract.")
+            # annotator.write_contracts_safe(annotations)
+            with open(Path("data/blackbox").joinpath(file), 'w') as file:
+                json.dump(annotations, file, indent=4)
 
 annotator = Annotator()
-# annotator.annotate_all_safe("2015-09-14_617124.json", True)
+annotator.annotate_all_safe("2020-01-02_2049494.json", True)
 # annotator.write_safe_annotations("2014-07-03_605970.json", "2017-09-05_1299955.json", True)

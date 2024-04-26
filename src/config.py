@@ -16,22 +16,59 @@ class Config:
     })
     prompt: str = field(default=
     '''
-        You are a parser. Your job is to parse text strings into uniform data. I will give you an input that you must read and I will also give you the structure you must convert it to. You must do this. You must not talk back, the only thing you reply with should be the example output format. You will only reply with one response output. The output must be in JSON format.
+        You are a parser. Your job is to parse text strings into uniform data. I will give you an input that you must read and I will also give you the structure you must convert it to. It must be a direct extraction, so no paraphrasing. If you cannot find something to extract for a specific field, you can just make it an empty string. You must not talk back, the only thing you reply with should be in the form of the example output format. You will only reply with one response output. You may not add any less or any more entities. The output must be in JSON format.
 
         EXAMPLE INPUT:
-        "Lockheed Martin Rotary and Mission Systems, Owego, New York, was awarded a $88,380,255 Captains of Industry contract for the overhaul of B-2 digital receiver and legacy defense message system. This contract provides for overhaul, management, and material lay-in. Work will be performed at Owego, New York, and is expected to be completed by April 16, 2034. This contract was a sole source acquisition. No funds are being obligated at time of award. The Air Force Sustainment Center, Tinker Air Force Base, Oklahoma, is the contracting activity (FA8119-24-D-0008). (Awarded April 17, 2024)"
+        "HRL Laboratories LLC, Malibu, California, was awarded a $26,991,707 cost-reimbursement contract for Creating Arrays for Strategic elecTro-optical, proLiferated and Exquisite (CASTLE) program. Work will be performed in Malibu, California, and is expected to be completed by July 19, 2029. The Air Force Research Laboratory, Kirtland Air Force Base, New Mexico, is the contracting activity (FA9453-24-C-X011)."
 
         EXAMPLE OUTPUT:
         {
-            "contract_id": "FA8119-24-D-0008",
-            "federal_agency": "Air Force Sustainment Center, Tinker Air Force Base, Oklahoma",
-            "contract_amount": "$88,380,255",
-            "company_name": "Lockheed Martin Rotary and Mission Systems",
-            "location": "Owego, New York",
-            "contract_description": "Captains of Industry contract for the overhaul of B-2 digital receiver and legacy defense message system. This contract provides for overhaul, management, and material lay-in.",
-            "estimated_completion_date": "April 16, 2034",
-            "funds_obligated": "No funds are being obligated at time of award"
-        }
+            "text": "HRL Laboratories LLC, Malibu, California, was awarded a $26,991,707 cost-reimbursement contract for Creating Arrays for Strategic elecTro-optical, proLiferated and Exquisite (CASTLE) program. Work will be performed in Malibu, California, and is expected to be completed by July 19, 2029. The Air Force Research Laboratory, Kirtland Air Force Base, New Mexico, is the contracting activity (FA9453-24-C-X011).",
+            "entities": [
+                            {
+                                "type": "company_name",
+                                "value": "HRL Laboratories LLC",
+                                "start": 0,
+                                "end": 19
+                            },
+                            {
+                                "type": "location",
+                                "value": "Malibu, California",
+                                "start": 21,
+                                "end": 38
+                            },
+                            {
+                                "type": "contract_amount",
+                                "value": "$26,991,707",
+                                "start": 51,
+                                "end": 62
+                            },
+                            {
+                                "type": "contract_description",
+                                "value": "cost-reimbursement contract for Creating Arrays for Strategic elecTro-optical, proLiferated and Exquisite (CASTLE) program",
+                                "start": 63,
+                                "end": 192
+                            },
+                            {
+                                "type": "estimated_completion_date",
+                                "value": "July 19, 2029",
+                                "start": 224,
+                                "end": 237
+                            },
+                            {
+                                "type": "federal_agency",
+                                "value": "Air Force Research Laboratory",
+                                "start": 265,
+                                "end": 293
+                            },
+                            {
+                                "type": "contract_id",
+                                "value": "FA9453-24-C-X011",
+                                "start": 341,
+                                "end": 357
+                            }
+                        ]
+            }
 
     '''
     )
